@@ -438,23 +438,54 @@ let journalData = {};
 let editingDate = null;
 let selectedColor = null;
 
-// ── Persistence ──
+// ── Persistence (localStorage → cookie fallback) ──
+const COOKIE_KEY = 'mj_';
+const COOKIE_MAX = 3500; // bytes, leaves room under 4KB cookie limit
+
+function setCookie(val, days) {
+  const d = new Date();
+  d.setTime(d.getTime() + (days * 86400000));
+  document.cookie = COOKIE_KEY + '=' + encodeURIComponent(val) +
+    ';expires=' + d.toUTCString() + ';path=/;SameSite=Lax';
+}
+function getCookie() {
+  const c = document.cookie.split(';');
+  for (const s of c) {
+    const p = s.trim().split('=');
+    if (p[0] === COOKIE_KEY) return decodeURIComponent(p[1]);
+  }
+  return null;
+}
+
 function loadData() {
+  // Try localStorage first
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    journalData = raw ? JSON.parse(raw) : {};
-  } catch { journalData = {}; }
+    if (raw) { journalData = JSON.parse(raw); return; }
+  } catch { /* ignore */ }
+  // Fall back to cookie
+  try {
+    const raw = getCookie();
+    if (raw) journalData = JSON.parse(raw);
+  } catch { /* ignore */ }
 }
 function saveData() {
+  const json = JSON.stringify(journalData);
+  // Try localStorage first
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(journalData));
+    localStorage.setItem(STORAGE_KEY, json);
+    return;
   } catch (e) {
     if (e.name === 'QuotaExceededError' || e.code === 22) {
-      // Try clearing old data and re-saving
-      localStorage.clear();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(journalData));
+      // Clear and retry localStorage once
+      try { localStorage.clear(); localStorage.setItem(STORAGE_KEY, json); return; }
+      catch { /* fall through to cookie */ }
     }
   }
+  // Fall back to cookie (compress if needed)
+  try {
+    setCookie(json, 365);
+  } catch { /* silent fail */ }
 }
 
 // ── Helpers ──
