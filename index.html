@@ -407,7 +407,9 @@
 <div class="overlay" id="importOverlay">
   <div class="modal">
     <h2>Import Profile</h2>
-    <div class="date-sub">Paste your exported JSON data below. This will merge with existing data.</div>
+    <div class="date-sub" style="margin-bottom:1rem">Upload your exported JSON file or paste the data below. This will merge with existing data.</div>
+    <input type="file" id="importFileInput" accept=".json" style="margin-bottom:1rem;font-size:.8rem;color:var(--text-dim);">
+    <div style="text-align:center;color:var(--text-dim);font-size:.75rem;margin:.5rem 0">— or paste below —</div>
     <textarea class="import-area" id="importArea" placeholder='{"2025-01-15":{"color":"green","note":"Great day!"}}'></textarea>
     <div class="modal-actions">
       <button class="btn-cancel" id="importCancelBtn">Cancel</button>
@@ -603,19 +605,42 @@ document.getElementById('exportBtn').addEventListener('click', () => {
 
 document.getElementById('importBtn').addEventListener('click', () => {
   document.getElementById('importArea').value = '';
+  document.getElementById('importFileInput').value = '';
   document.getElementById('importOverlay').classList.add('active');
 });
 document.getElementById('importCancelBtn').addEventListener('click', () => {
   document.getElementById('importOverlay').classList.remove('active');
 });
+
+// Handle file upload
+document.getElementById('importFileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    document.getElementById('importArea').value = ev.target.result;
+  };
+  reader.readAsText(file);
+});
+
 document.getElementById('importSaveBtn').addEventListener('click', () => {
+  const raw = document.getElementById('importArea').value.trim();
+  if (!raw) { alert('No data to import.'); return; }
   try {
-    const data = JSON.parse(document.getElementById('importArea').value);
+    const data = JSON.parse(raw);
+    if (typeof data !== 'object' || Array.isArray(data)) {
+      alert('Invalid data format. Expected a JSON object with date keys.');
+      return;
+    }
+    const count = Object.keys(data).length;
     Object.assign(journalData, data);
     saveData();
     render();
     document.getElementById('importOverlay').classList.remove('active');
-  } catch { alert('Invalid JSON. Please check your export data.'); }
+    alert(`Imported ${count} entries successfully.`);
+  } catch (err) {
+    alert(`Invalid JSON: ${err.message}. Please check your export data.`);
+  }
 });
 document.getElementById('importOverlay').addEventListener('click', e => {
   if (e.target === e.currentTarget) document.getElementById('importOverlay').classList.remove('active');
