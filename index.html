@@ -381,6 +381,7 @@
 <div class="toolbar">
   <button id="exportBtn">↓ Export Profile</button>
   <button id="importBtn">↑ Import Profile</button>
+  <button id="clearBtn" style="color:var(--red)">✕ Clear Data</button>
 </div>
 
 <div class="mood-legend" id="moodLegend"></div>
@@ -445,7 +446,15 @@ function loadData() {
   } catch { journalData = {}; }
 }
 function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(journalData));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(journalData));
+  } catch (e) {
+    if (e.name === 'QuotaExceededError' || e.code === 22) {
+      // Try clearing old data and re-saving
+      localStorage.clear();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(journalData));
+    }
+  }
 }
 
 // ── Helpers ──
@@ -585,6 +594,15 @@ function saveEntry() {
 // ── Year Navigation ──
 document.getElementById('prevYear').addEventListener('click', () => { currentYear--; render(); });
 document.getElementById('nextYear').addEventListener('click', () => { currentYear++; render(); });
+
+// ── Clear Data ──
+document.getElementById('clearBtn').addEventListener('click', () => {
+  if (confirm('Are you sure you want to delete all journal data? This cannot be undone.')) {
+    journalData = {};
+    localStorage.removeItem(STORAGE_KEY);
+    render();
+  }
+});
 
 // ── Modal Controls ──
 document.getElementById('cancelBtn').addEventListener('click', closeEntryModal);
