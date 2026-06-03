@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>10 Second Journal</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root {
+    --bg: #0f0f13;
+    --surface: #1a1a24;
+    --surface2: #24243a;
+    --border: #2e2e48;
+    --text: #e2e2f0;
+    --text-dim: #8888a8;
+    --accent: #7c6bf0;
+    --accent-glow: rgba(124,107,240,.25);
+    --blue: #5b9cf6;
+    --green: #4ade80;
+    --yellow: #facc15;
+    --orange: #fb923c;
+    --red: #f87171;
+    --brown: #a0784a;
+    --radius: 8px;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+  html { font-size: 14px; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem 4rem;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    margin-bottom: 2rem;
+    animation: fadeDown .6s ease;
+  }
+  .header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    background: linear-gradient(135deg, var(--accent), #c084fc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header p { color: var(--text-dim); font-size: .85rem; margin-top: .3rem; }
+
+  /* ── Year Nav ── */
+  .year-nav {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    margin-bottom: 1.8rem;
+    animation: fadeDown .6s ease .1s both;
+  }
+  .year-nav button {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 36px; height: 36px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all .2s;
+    display: grid; place-items: center;
+  }
+  .year-nav button:hover { background: var(--surface2); border-color: var(--accent); }
+  .year-nav .year-label {
+    font-size: 1.5rem;
+    font-weight: 600;
+    min-width: 60px;
+    text-align: center;
+  }
+
+  /* ── Mood Legend ── */
+  .mood-legend {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 1.8rem;
+    animation: fadeDown .6s ease .12s both;
+  }
+  .mood-legend-item {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    font-size: .75rem;
+    color: var(--text-dim);
+    user-select: none;
+  }
+  .mood-legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  /* ── Toolbar ── */
+  .toolbar {
+    display: flex; gap: .6rem; margin-bottom: 1.8rem;
+    animation: fadeDown .6s ease .15s both;
+  }
+  .toolbar button {
+    background: var(--surface);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: .45rem 1rem;
+    font-size: .8rem;
+    cursor: pointer;
+    transition: all .2s;
+    font-family: var(--font);
+  }
+  .toolbar button:hover {
+    color: var(--text);
+    border-color: var(--accent);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  /* ── Grid ── */
+  .calendar {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1rem;
+    max-width: 960px;
+    width: 100%;
+    animation: fadeUp .7s ease .2s both;
+  }
+  @media (max-width: 900px) {
+    .calendar { grid-template-columns: repeat(4, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .calendar { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .month {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: .7rem;
+    transition: border-color .3s, box-shadow .3s;
+  }
+  .month:hover {
+    border-color: #3e3e60;
+  }
+  .month-name {
+    font-size: .75rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: .5rem;
+    text-align: center;
+  }
+  .month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+  }
+  .day-header {
+    font-size: .55rem;
+    color: var(--text-dim);
+    text-align: center;
+    opacity: .5;
+    user-select: none;
+  }
+  .day-cell {
+    aspect-ratio: 1;
+    border-radius: 3px;
+    background: var(--surface2);
+    cursor: pointer;
+    transition: transform .15s, box-shadow .2s, background .2s;
+    position: relative;
+  }
+  .day-cell.empty { background: transparent; cursor: default; }
+  .day-cell:not(.empty):hover {
+    transform: scale(1.35);
+    z-index: 2;
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .day-cell.colored {
+    border: 1px solid rgba(255,255,255,.12);
+  }
+  .day-cell.has-note {
+    outline: 2px solid #fff;
+    outline-offset: 0px;
+    box-shadow: 0 0 6px rgba(255,255,255,.35);
+  }
+
+  /* ── Tooltip ── */
+  .day-cell[data-note]:not(.empty)::after {
+    content: attr(data-note);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) scale(.9);
+    background: #1e1e30;
+    color: var(--text);
+    font-size: .7rem;
+    padding: .3rem .55rem;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .2s, transform .2s;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 16px rgba(0,0,0,.4);
+    z-index: 10;
+  }
+  .day-cell[data-note]:not(.empty):hover::after {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+
+  /* ── Modal Overlay ── */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.55);
+    backdrop-filter: blur(4px);
+    display: grid; place-items: center;
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s;
+  }
+  .overlay.active { opacity: 1; pointer-events: auto; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.8rem;
+    width: 340px;
+    max-width: 92vw;
+    transform: translateY(20px) scale(.96);
+    transition: transform .3s cubic-bezier(.22,1,.36,1), opacity .3s;
+    opacity: 0;
+    box-shadow: 0 20px 60px rgba(0,0,0,.45);
+  }
+  .overlay.active .modal {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  .modal h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: .3rem;
+  }
+  .modal .date-sub {
+    font-size: .78rem;
+    color: var(--text-dim);
+    margin-bottom: 1.2rem;
+  }
+
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: .5rem;
+    margin-bottom: 1.2rem;
+  }
+  .color-btn {
+    border: 2px solid transparent;
+    border-radius: var(--radius);
+    padding: .55rem .3rem;
+    font-size: .72rem;
+    cursor: pointer;
+    color: #fff;
+    text-align: center;
+    transition: transform .15s, border-color .2s, box-shadow .2s;
+    font-family: var(--font);
+    font-weight: 500;
+  }
+  .color-btn:hover { transform: scale(1.06); }
+  .color-btn.selected { border-color: #fff; box-shadow: 0 0 12px var(--accent-glow); }
+  .color-btn.clear-btn {
+    background: var(--surface2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+
+  .modal textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: .6rem .8rem;
+    font-size: .82rem;
+    font-family: var(--font);
+    resize: vertical;
+    min-height: 60px;
+    margin-bottom: 1.2rem;
+    transition: border-color .2s;
+    outline: none;
+  }
+  .modal textarea:focus { border-color: var(--accent); }
+
+  .modal-actions {
+    display: flex; gap: .6rem; justify-content: flex-end;
+  }
+  .modal-actions button {
+    padding: .5rem 1.2rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    font-size: .82rem;
+    cursor: pointer;
+    font-family: var(--font);
+    font-weight: 500;
+    transition: all .2s;
+  }
+  .btn-cancel { background: var(--surface2); color: var(--text-dim); }
+  .btn-cancel:hover { color: var(--text); }
+  .btn-save { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-save:hover { box-shadow: 0 0 16px var(--accent-glow); }
+
+  /* ── Import/Export Modal ── */
+  .import-area {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    color: var(--text-dim);
+    padding: 1rem;
+    font-size: .82rem;
+    font-family: var(--font);
+    resize: vertical;
+    min-height: 120px;
+    margin-bottom: 1rem;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .import-area:focus { border-color: var(--accent); }
+
+  /* ── Animations ── */
+  @keyframes fadeDown {
+    from { opacity:0; transform:translateY(-16px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(24px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  /* ── Footer Credit ── */
+  .footer-credit {
+    margin-top: 2.5rem;
+    font-size: .65rem;
+    color: var(--text-dim);
+    opacity: .4;
+    letter-spacing: .04em;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>10 Second Journal</h1>
+  <p>A calendar for your emotions</p>
+</div>
+
+<div class="year-nav">
+  <button id="prevYear" aria-label="Previous year">&#8592;</button>
+  <span class="year-label" id="yearLabel"></span>
+  <button id="nextYear" aria-label="Next year">&#8594;</button>
+</div>
+
+<div class="toolbar">
+  <button id="exportBtn">↓ Export Profile</button>
+  <button id="importBtn">↑ Import Profile</button>
+</div>
+
+<div class="mood-legend" id="moodLegend"></div>
+
+<div class="calendar" id="calendar"></div>
+
+<div class="footer-credit">made by Raven</div>
+
+<!-- Entry Modal -->
+<div class="overlay" id="entryOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">How was your day?</h2>
+    <div class="date-sub" id="modalDate"></div>
+    <div class="color-grid" id="colorGrid"></div>
+    <textarea id="noteInput" placeholder="Add a note about your day…"></textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="cancelBtn">Cancel</button>
+      <button class="btn-save" id="saveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="overlay" id="importOverlay">
+  <div class="modal">
+    <h2>Import Profile</h2>
+    <div class="date-sub">Paste your exported JSON data below. This will merge with existing data.</div>
+    <textarea class="import-area" id="importArea" placeholder='{"2025-01-15":{"color":"green","note":"Great day!"}}'></textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="importCancelBtn">Cancel</button>
+      <button class="btn-save" id="importSaveBtn">Import</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS = ['S','M','T','W','T','F','S'];
+
+const MOOD_COLORS = [
+  { key:'blue',   label:'Very Happy',  hex:'var(--blue)' },
+  { key:'green',  label:'Happy',       hex:'var(--green)' },
+  { key:'yellow', label:'Normal',      hex:'var(--yellow)' },
+  { key:'orange', label:'Not Great',   hex:'var(--orange)' },
+  { key:'red',    label:'Sad',         hex:'var(--red)' },
+  { key:'brown',  label:'Depressed',   hex:'var(--brown)' },
+];
+
+const STORAGE_KEY = 'moodJournalData';
+let currentYear = new Date().getFullYear();
+let journalData = {};
+let editingDate = null;
+let selectedColor = null;
+
+// ── Persistence ──
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    journalData = raw ? JSON.parse(raw) : {};
+  } catch { journalData = {}; }
+}
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(journalData));
+}
+
+// ── Helpers ──
+function dateKey(y, m, d) {
+  return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+function daysInMonth(y, m) {
+  return new Date(y, m + 1, 0).getDate();
+}
+
+// ── Render Calendar ──
+function render() {
+  document.getElementById('yearLabel').textContent = currentYear;
+  const cal = document.getElementById('calendar');
+  cal.innerHTML = '';
+
+  for (let m = 0; m < 12; m++) {
+    const monthEl = document.createElement('div');
+    monthEl.className = 'month';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'month-name';
+    nameEl.textContent = MONTHS[m];
+    monthEl.appendChild(nameEl);
+
+    const grid = document.createElement('div');
+    grid.className = 'month-grid';
+
+    // Day headers
+    DAYS.forEach(d => {
+      const dh = document.createElement('div');
+      dh.className = 'day-header';
+      dh.textContent = d;
+      grid.appendChild(dh);
+    });
+
+    // Leading empty cells
+    const firstDow = new Date(currentYear, m, 1).getDay();
+    for (let i = 0; i < firstDow; i++) {
+      const empty = document.createElement('div');
+      empty.className = 'day-cell empty';
+      grid.appendChild(empty);
+    }
+
+    // Day cells
+    const dim = daysInMonth(currentYear, m);
+    for (let d = 1; d <= dim; d++) {
+      const cell = document.createElement('div');
+      cell.className = 'day-cell';
+      const key = dateKey(currentYear, m, d);
+      const entry = journalData[key];
+
+      if (entry && entry.color) {
+        const mood = MOOD_COLORS.find(x => x.key === entry.color);
+        if (mood) {
+          cell.style.background = mood.hex;
+          cell.classList.add('colored');
+        }
+      }
+      if (entry && entry.note) {
+        cell.setAttribute('data-note', entry.note);
+        cell.classList.add('has-note');
+      }
+
+      cell.addEventListener('click', () => openEntryModal(key, `${MONTHS[m]} ${d}, ${currentYear}`));
+      grid.appendChild(cell);
+    }
+
+    monthEl.appendChild(grid);
+    cal.appendChild(monthEl);
+  }
+}
+
+// ── Entry Modal ──
+function openEntryModal(key, label) {
+  editingDate = key;
+  selectedColor = null;
+  document.getElementById('modalDate').textContent = label;
+  document.getElementById('noteInput').value = journalData[key]?.note || '';
+
+  const grid = document.getElementById('colorGrid');
+  grid.innerHTML = '';
+
+  MOOD_COLORS.forEach(mood => {
+    const btn = document.createElement('button');
+    btn.className = 'color-btn';
+    btn.style.background = mood.hex;
+    btn.textContent = mood.label;
+    if (journalData[key]?.color === mood.key) {
+      btn.classList.add('selected');
+      selectedColor = mood.key;
+    }
+    btn.addEventListener('click', () => {
+      grid.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedColor = mood.key;
+    });
+    grid.appendChild(btn);
+  });
+
+  // Clear button
+  const clearBtn = document.createElement('button');
+  clearBtn.className = 'color-btn clear-btn';
+  clearBtn.textContent = 'Clear entry';
+  clearBtn.addEventListener('click', () => {
+    grid.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'));
+    selectedColor = 'clear';
+  });
+  grid.appendChild(clearBtn);
+
+  document.getElementById('entryOverlay').classList.add('active');
+}
+
+function closeEntryModal() {
+  document.getElementById('entryOverlay').classList.remove('active');
+  editingDate = null;
+  selectedColor = null;
+}
+
+function saveEntry() {
+  if (!editingDate) return;
+  if (selectedColor === 'clear') {
+    delete journalData[editingDate];
+  } else {
+    const entry = { color: selectedColor, note: document.getElementById('noteInput').value.trim() };
+    if (!entry.color && !entry.note) {
+      delete journalData[editingDate];
+    } else {
+      journalData[editingDate] = entry;
+    }
+  }
+  saveData();
+  render();
+  closeEntryModal();
+}
+
+// ── Year Navigation ──
+document.getElementById('prevYear').addEventListener('click', () => { currentYear--; render(); });
+document.getElementById('nextYear').addEventListener('click', () => { currentYear++; render(); });
+
+// ── Modal Controls ──
+document.getElementById('cancelBtn').addEventListener('click', closeEntryModal);
+document.getElementById('saveBtn').addEventListener('click', saveEntry);
+document.getElementById('entryOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeEntryModal(); });
+
+// ── Import / Export ──
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const json = JSON.stringify(journalData, null, 2);
+  const blob = new Blob([json], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `mood-journal-export-${currentYear}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('importBtn').addEventListener('click', () => {
+  document.getElementById('importArea').value = '';
+  document.getElementById('importOverlay').classList.add('active');
+});
+document.getElementById('importCancelBtn').addEventListener('click', () => {
+  document.getElementById('importOverlay').classList.remove('active');
+});
+document.getElementById('importSaveBtn').addEventListener('click', () => {
+  try {
+    const data = JSON.parse(document.getElementById('importArea').value);
+    Object.assign(journalData, data);
+    saveData();
+    render();
+    document.getElementById('importOverlay').classList.remove('active');
+  } catch { alert('Invalid JSON. Please check your export data.'); }
+});
+document.getElementById('importOverlay').addEventListener('click', e => {
+  if (e.target === e.currentTarget) document.getElementById('importOverlay').classList.remove('active');
+});
+
+// ── Keyboard ──
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeEntryModal();
+    document.getElementById('importOverlay').classList.remove('active');
+  }
+});
+
+// ── Render Legend ──
+function renderLegend() {
+  const el = document.getElementById('moodLegend');
+  MOOD_COLORS.forEach(mood => {
+    const item = document.createElement('div');
+    item.className = 'mood-legend-item';
+    const dot = document.createElement('span');
+    dot.className = 'mood-legend-dot';
+    dot.style.background = mood.hex;
+    item.appendChild(dot);
+    item.appendChild(document.createTextNode(mood.label));
+    el.appendChild(item);
+  });
+}
+
+// ── Boot ──
+loadData();
+render();
+renderLegend();
+</script>
+</body>
+</html>
